@@ -56,6 +56,12 @@ export class MusicPlayer {
     }
   }
 
+  public async playImmediate(source: string) {
+    this.stop();
+    this.currentTrack = source;
+    await this.playTrack(source);
+  }
+
   private async playTrack(source: string) {
     try {
       let resource: AudioResource;
@@ -64,12 +70,20 @@ export class MusicPlayer {
         // ローカルファイルの場合
         const stream = createReadStream(source);
         resource = createAudioResource(stream);
-      } else {
+      } else if (source.startsWith('http')) {
         // URLの場合
-        const stream = await play.stream(source);
-        resource = createAudioResource(stream.stream, {
-          inputType: stream.type
-        });
+        if (source.includes('youtube.com') || source.includes('youtu.be')) {
+          // YouTube URLの場合
+          const stream = await play.stream(source);
+          resource = createAudioResource(stream.stream, {
+            inputType: stream.type
+          });
+        } else {
+          // その他のURLの場合は直接リソースとして使用
+          resource = createAudioResource(source);
+        }
+      } else {
+        throw new Error('Invalid source: ' + source);
       }
       
       this.audioPlayer.play(resource);
