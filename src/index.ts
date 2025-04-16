@@ -38,11 +38,25 @@ client.on(Events.MessageCreate, async (message) => {
   }
 
   // Music commands
-  if (message.content === '!play') {
+  if (message.content.startsWith('!play')) {
     // Check if user is in a voice channel
     if (!message.member?.voice.channel) {
       await message.reply('ボイスチャンネルに参加してから実行してください！');
       return;
+    }
+
+    let source: string;
+    const arg = message.content.slice(6).trim();
+
+    if (!arg) {
+      // 引数がない場合はデフォルトの音声ファイルを再生
+      source = join(__dirname, '../music/001.mp3');
+    } else if (arg.startsWith('http')) {
+      // URLの場合はそのまま使用
+      source = arg;
+    } else {
+      // ファイル名が指定された場合は、musicディレクトリから探す
+      source = join(__dirname, '../music', arg);
     }
 
     // Get or create music player for this guild
@@ -59,9 +73,8 @@ client.on(Events.MessageCreate, async (message) => {
       return;
     }
 
-    const path = join(__dirname, '../music/001.mp3');
     // Add song to queue
-    player.addToQueue(path);
+    player.addToQueue(source);
     await message.reply('再生を開始します！');
   }
 

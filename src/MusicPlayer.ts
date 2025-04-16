@@ -9,6 +9,8 @@ import {
 } from '@discordjs/voice';
 import { VoiceBasedChannel } from 'discord.js';
 import { createReadStream } from 'fs';
+import { existsSync } from 'fs';
+import * as play from 'play-dl';
 
 export class MusicPlayer {
   private connection: VoiceConnection | null = null;
@@ -47,17 +49,28 @@ export class MusicPlayer {
     }
   }
 
-  public addToQueue(filePath: string) {
-    this.queue.push(filePath);
+  public addToQueue(source: string) {
+    this.queue.push(source);
     if (!this.isPlaying) {
       this.playNext();
     }
   }
 
-  private playTrack(filePath: string) {
+  private async playTrack(source: string) {
     try {
-      const stream = createReadStream(filePath);
-      const resource = createAudioResource(stream);
+      let resource: AudioResource;
+
+      if (existsSync(source)) {
+        // ローカルファイルの場合
+        const stream = createReadStream(source);
+        resource = createAudioResource(stream);
+      } else {
+        // URLの場合
+        const stream = await play.stream(source);
+        resource = createAudioResource(stream.stream, {
+          inputType: stream.type
+        });
+      }
       
       this.audioPlayer.play(resource);
       this.isPlaying = true;
@@ -71,19 +84,19 @@ export class MusicPlayer {
     }
   }
 
-  public playNext() {
+  public async playNext() {
     if (this.queue.length === 0) return;
 
-    const filePath = this.queue.shift();
-    if (!filePath) return;
+    const source = this.queue.shift();
+    if (!source) return;
 
-    this.currentTrack = filePath;
-    this.playTrack(filePath);
+    this.currentTrack = source;
+    await this.playTrack(source);
   }
 
-  private playAgain() {
+  private async playAgain() {
     if (!this.currentTrack) return;
-    this.playTrack(this.currentTrack);
+    await this.playTrack(this.currentTrack);
   }
 
   public stop() {
