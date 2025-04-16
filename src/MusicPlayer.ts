@@ -5,20 +5,29 @@ import {
   createAudioPlayer,
   createAudioResource,
   joinVoiceChannel,
-  VoiceConnection,
+  VoiceConnection
 } from '@discordjs/voice';
 import { VoiceBasedChannel } from 'discord.js';
-import { createReadStream } from 'fs';
-import { existsSync } from 'fs';
+import { createReadStream, existsSync } from 'fs';
+import { join } from 'path';
 import * as play from 'play-dl';
 
 export class MusicPlayer {
+  private static readonly DEFAULT_TRACK = join(__dirname, '../music/001.mp3');
+
   private connection: VoiceConnection | null = null;
   private audioPlayer: AudioPlayer;
   private queue: string[] = [];
   private isPlaying = false;
   private isLooping = false;
   private currentTrack: string | null = null;
+
+  public static resolveSource(source: string | null): string {
+    if (!source) {
+      return MusicPlayer.DEFAULT_TRACK;
+    }
+    return source.startsWith('http') ? source : join(__dirname, '../music', source);
+  }
 
   constructor() {
     this.audioPlayer = createAudioPlayer();
