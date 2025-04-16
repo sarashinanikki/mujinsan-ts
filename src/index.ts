@@ -37,45 +37,57 @@ client.on(Events.MessageCreate, async (message) => {
     return;
   }
 
-  // Music commands
-  if (message.content.startsWith('!play')) {
-    // Check if user is in a voice channel
+  // Helper function to resolve source path
+  const resolveSource = (arg: string): string => {
+    if (!arg) {
+      return join(__dirname, '../music/001.mp3');
+    } else if (arg.startsWith('http')) {
+      return arg;
+    } else {
+      return join(__dirname, '../music', arg);
+    }
+  };
+
+  // Helper function to get or create player
+  const getOrCreatePlayer = async (message: any): Promise<MusicPlayer | null> => {
     if (!message.member?.voice.channel) {
       await message.reply('ボイスチャンネルに参加してから実行してください！');
-      return;
+      return null;
     }
 
-    let source: string;
-    const arg = message.content.slice(6).trim();
-
-    if (!arg) {
-      // 引数がない場合はデフォルトの音声ファイルを再生
-      source = join(__dirname, '../music/001.mp3');
-    } else if (arg.startsWith('http')) {
-      // URLの場合はそのまま使用
-      source = arg;
-    } else {
-      // ファイル名が指定された場合は、musicディレクトリから探す
-      source = join(__dirname, '../music', arg);
-    }
-
-    // Get or create music player for this guild
     let player = musicPlayers.get(message.guildId!);
     if (!player) {
       player = new MusicPlayer();
       musicPlayers.set(message.guildId!, player);
     }
 
-    // Join voice channel if not already joined
     const joined = await player.join(message.member.voice.channel);
     if (!joined) {
       await message.reply('ボイスチャンネルへの参加に失敗しました。');
-      return;
+      return null;
     }
 
-    // Add song to queue
-    player.addToQueue(source);
+    return player;
+  };
+
+  // Immediate play command
+  if (message.content.startsWith('!play')) {
+    const player = await getOrCreatePlayer(message);
+    if (!player) return;
+
+    const source = resolveSource(message.content.slice(6).trim());
+    await player.playImmediate(source);
     await message.reply('再生を開始します！');
+  }
+
+  // Add to queue command
+  if (message.content.startsWith('!queue')) {
+    const player = await getOrCreatePlayer(message);
+    if (!player) return;
+
+    const source = resolveSource(message.content.slice(7).trim());
+    player.addToQueue(source);
+    await message.reply('キューに追加しました！');
   }
 
   // Stop command
