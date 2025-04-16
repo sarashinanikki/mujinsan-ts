@@ -74,6 +74,15 @@ client.on(Events.MessageCreate, async (message) => {
     }
   }
 
+  // Loop command
+  if (message.content === '!loop') {
+    const player = musicPlayers.get(message.guildId!);
+    if (player) {
+      const isLooping = player.toggleLoop();
+      await message.reply(isLooping ? 'ループ再生を有効にしました。' : 'ループ再生を無効にしました。');
+    }
+  }
+
   // Disconnect command
   if (message.content === '!disconnect') {
     const player = musicPlayers.get(message.guildId!);

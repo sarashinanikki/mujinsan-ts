@@ -15,13 +15,19 @@ export class MusicPlayer {
   private audioPlayer: AudioPlayer;
   private queue: string[] = [];
   private isPlaying = false;
+  private isLooping = false;
+  private currentTrack: string | null = null;
 
   constructor() {
     this.audioPlayer = createAudioPlayer();
     
     this.audioPlayer.on(AudioPlayerStatus.Idle, () => {
       this.isPlaying = false;
-      this.playNext();
+      if (this.isLooping && this.currentTrack) {
+        this.playAgain();
+      } else {
+        this.playNext();
+      }
     });
   }
 
@@ -48,12 +54,7 @@ export class MusicPlayer {
     }
   }
 
-  public playNext() {
-    if (this.queue.length === 0) return;
-
-    const filePath = this.queue.shift();
-    if (!filePath) return;
-
+  private playTrack(filePath: string) {
     try {
       const stream = createReadStream(filePath);
       const resource = createAudioResource(stream);
@@ -62,14 +63,43 @@ export class MusicPlayer {
       this.isPlaying = true;
     } catch (error) {
       console.error('Error playing audio:', error);
-      this.playNext();
+      if (this.isLooping) {
+        this.playAgain();
+      } else {
+        this.playNext();
+      }
     }
+  }
+
+  public playNext() {
+    if (this.queue.length === 0) return;
+
+    const filePath = this.queue.shift();
+    if (!filePath) return;
+
+    this.currentTrack = filePath;
+    this.playTrack(filePath);
+  }
+
+  private playAgain() {
+    if (!this.currentTrack) return;
+    this.playTrack(this.currentTrack);
   }
 
   public stop() {
     this.queue = [];
     this.audioPlayer.stop();
     this.isPlaying = false;
+    this.currentTrack = null;
+  }
+
+  public toggleLoop(): boolean {
+    this.isLooping = !this.isLooping;
+    return this.isLooping;
+  }
+
+  public isLoopEnabled(): boolean {
+    return this.isLooping;
   }
 
   public disconnect() {
